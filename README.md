@@ -2,7 +2,7 @@
 
 🛡️ **AES-256-CBC Encryption/Decryption Tester**  
 
-A lightweight client-side web tool for verifying your NestJS AES-256-CBC + SHA-256 key derivation implementation.
+A lightweight client-side web tool for AES-256-CBC + SHA-256 key derivation implementation.
 
 ## 🔑 Features
 
