@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AES-256-CBC Encryption/Decryption Tester</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://abdelrahmanbayoumi.github.io/TripleDES-Encryptor-Decryptor/favicon.png"
+    />
+    <!-- CryptoJS library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 30px;
+      }
+      h1 {
+        text-align: center;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+      }
+      .mode-toggle {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .mode-toggle label {
+        margin: 0 10px;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .section {
+        display: none;
+      }
+      .section.active {
+        display: block;
+      }
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+      }
+      input[type="text"],
+      textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      textarea[readonly] {
+        background-color: #f0f0f0;
+      }
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AES-256-CBC Encryption and Decryption</h1>
+
+    <div class="container">
+      <!-- Mode toggle -->
+      <div class="mode-toggle">
+        <label>
+          <input type="radio" name="mode" value="encrypt" checked /> Encrypt
+        </label>
+        <label>
+          <input type="radio" name="mode" value="decrypt" /> Decrypt
+        </label>
+      </div>
+
+      <!-- Encryption -->
+      <div class="section active" id="encrypt-section">
+        <label for="encrypt-key">Key (passphrase):</label>
+        <input
+          type="text"
+          id="encrypt-key"
+          placeholder="Enter encryption key"
+        />
+
+        <label for="plaintext">Plaintext:</label>
+        <textarea id="plaintext" placeholder="Enter text to encrypt"></textarea>
+
+        <button onclick="performEncryption()">Encrypt</button>
+
+        <label for="ciphertext">Ciphertext (hex IV + ':' + hex payload):</label>
+        <textarea id="ciphertext" readonly></textarea>
+      </div>
+
+      <!-- Decryption -->
+      <div class="section" id="decrypt-section">
+        <label for="decrypt-key">Key (passphrase):</label>
+        <input
+          type="text"
+          id="decrypt-key"
+          placeholder="Enter decryption key"
+        />
+
+        <label for="ciphertext-input">Ciphertext (ivHex:cipherHex):</label>
+        <textarea
+          id="ciphertext-input"
+          placeholder="Enter iv:ciphertext"
+        ></textarea>
+
+        <button onclick="performDecryption()">Decrypt</button>
+
+        <label for="decrypted-text">Decrypted Text:</label>
+        <textarea id="decrypted-text" readonly></textarea>
+      </div>
+
+      <div class="error" id="error-message"></div>
+    </div>
+
+    <script>
+      // AES-256-CBC + SHA-256 key derivation
+      function encryptAES256(text, passphrase) {
+        const key = CryptoJS.SHA256(passphrase);
+        const iv = CryptoJS.lib.WordArray.random(16);
+        const encrypted = CryptoJS.AES.encrypt(text, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+        });
+        const ivHex = iv.toString(CryptoJS.enc.Hex);
+        const ctHex = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+        return ivHex + ":" + ctHex;
+      }
+
+      function decryptAES256(data, passphrase) {
+        const parts = data.split(":");
+        if (parts.length !== 2) {
+          throw new Error("Invalid format. Expect ivHex:cipherHex");
+        }
+        const iv = CryptoJS.enc.Hex.parse(parts[0]);
+        const ciphertext = CryptoJS.enc.Hex.parse(parts[1]);
+        const key = CryptoJS.SHA256(passphrase);
+        const decrypted = CryptoJS.AES.decrypt(
+          { ciphertext: ciphertext },
+          key,
+          {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7,
+          }
+        );
+        return decrypted.toString(CryptoJS.enc.Utf8);
+      }
+
+      function performEncryption() {
+        const key = document.getElementById("encrypt-key").value.trim();
+        const txt = document.getElementById("plaintext").value.trim();
+        const err = document.getElementById("error-message");
+        err.textContent = "";
+        if (!key || !txt) {
+          err.textContent = "Please enter both key and plaintext.";
+          return;
+        }
+        try {
+          const ct = encryptAES256(txt, key);
+          document.getElementById("ciphertext").value = ct;
+        } catch (e) {
+          err.textContent = "Encryption failed.";
+          console.error(e);
+        }
+      }
+
+      function performDecryption() {
+        const key = document.getElementById("decrypt-key").value.trim();
+        const ct = document.getElementById("ciphertext-input").value.trim();
+        const err = document.getElementById("error-message");
+        err.textContent = "";
+        if (!key || !ct) {
+          err.textContent = "Please enter both key and ciphertext.";
+          return;
+        }
+        try {
+          const pt = decryptAES256(ct, key);
+          document.getElementById("decrypted-text").value = pt;
+        } catch (e) {
+          err.textContent = "Decryption failed.";
+          console.error(e);
+        }
+      }
+
+      // Toggle sections
+      document.querySelectorAll('input[name="mode"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          document.getElementById("error-message").textContent = "";
+          if (radio.value === "encrypt") {
+            document.getElementById("encrypt-section").classList.add("active");
+            document
+              .getElementById("decrypt-section")
+              .classList.remove("active");
+          } else {
+            document.getElementById("decrypt-section").classList.add("active");
+            document
+              .getElementById("encrypt-section")
+              .classList.remove("active");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
